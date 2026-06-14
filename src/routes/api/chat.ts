@@ -45,7 +45,7 @@ export const Route = createFileRoute("/api/chat")({
             conversation_id: body.conversationId,
             user_id: auth.userId,
             role: "user",
-            parts: lastUser.parts as unknown as object,
+            parts: lastUser.parts as unknown as never,
           });
           // Title from first user message text
           const firstText = (lastUser.parts as Array<{ type: string; text?: string }>).find((p) => p.type === "text")?.text ?? "";
