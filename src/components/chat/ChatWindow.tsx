@@ -65,7 +65,6 @@ export function ChatWindow({ threadId }: { threadId: string }) {
         try {
           const r = await imageFn({ data: { prompt: text } });
           if (!r.imageDataUrl) throw new Error("No image returned");
-          // append messages via server is complex; just toast and provide preview through DOM
           qc.invalidateQueries({ queryKey: ["credits"] });
           toast.success("Image ready");
           return r.imageDataUrl;
@@ -81,7 +80,6 @@ export function ChatWindow({ threadId }: { threadId: string }) {
       imgLoading={imgLoading}
       profileAvatar={profile?.avatarSignedUrl ?? null}
       profileInitial={(profile?.full_name || profile?.email || "U").slice(0, 1).toUpperCase()}
-      t={t}
     />
   );
 }
@@ -96,7 +94,6 @@ function Inner({
   imgLoading,
   profileAvatar,
   profileInitial,
-  t,
 }: {
   threadId: string;
   token: string;
@@ -107,8 +104,8 @@ function Inner({
   imgLoading: boolean;
   profileAvatar: string | null;
   profileInitial: string;
-  t: (k: never) => string;
 }) {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [localImages, setLocalImages] = useState<{ id: string; role: "assistant" | "user"; parts: UIMessage["parts"] }[]>([]);
 
@@ -177,8 +174,8 @@ function Inner({
               <div className="inline-flex h-14 w-14 rounded-2xl nova-gradient items-center justify-center text-white mb-4">
                 <Sparkles className="h-6 w-6" />
               </div>
-              <h2 className="text-2xl font-semibold tracking-tight">{t("chat.empty.t" as never)}</h2>
-              <p className="text-muted-foreground mt-1 text-sm">{t("chat.empty.s" as never)}</p>
+              <h2 className="text-2xl font-semibold tracking-tight">{t("chat.empty.t")}</h2>
+              <p className="text-muted-foreground mt-1 text-sm">{t("chat.empty.s")}</p>
             </div>
           ) : (
             allMessages.map((m) => (
