@@ -14,6 +14,10 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
+import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
+import { Route as AuthenticatedAppProfileRouteImport } from './routes/_authenticated/app.profile'
+import { Route as AuthenticatedAppPricingRouteImport } from './routes/_authenticated/app.pricing'
+import { Route as AuthenticatedAppCThreadIdRouteImport } from './routes/_authenticated/app.c.$threadId'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -39,32 +43,79 @@ const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   path: '/app',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppProfileRoute = AuthenticatedAppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppPricingRoute = AuthenticatedAppPricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppCThreadIdRoute =
+  AuthenticatedAppCThreadIdRouteImport.update({
+    id: '/c/$threadId',
+    path: '/c/$threadId',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/app': typeof AuthenticatedAppRoute
+  '/app': typeof AuthenticatedAppRouteWithChildren
   '/api/chat': typeof ApiChatRoute
+  '/app/pricing': typeof AuthenticatedAppPricingRoute
+  '/app/profile': typeof AuthenticatedAppProfileRoute
+  '/app/': typeof AuthenticatedAppIndexRoute
+  '/app/c/$threadId': typeof AuthenticatedAppCThreadIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/app': typeof AuthenticatedAppRoute
   '/api/chat': typeof ApiChatRoute
+  '/app/pricing': typeof AuthenticatedAppPricingRoute
+  '/app/profile': typeof AuthenticatedAppProfileRoute
+  '/app': typeof AuthenticatedAppIndexRoute
+  '/app/c/$threadId': typeof AuthenticatedAppCThreadIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/_authenticated/app': typeof AuthenticatedAppRoute
+  '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/api/chat': typeof ApiChatRoute
+  '/_authenticated/app/pricing': typeof AuthenticatedAppPricingRoute
+  '/_authenticated/app/profile': typeof AuthenticatedAppProfileRoute
+  '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/app/c/$threadId': typeof AuthenticatedAppCThreadIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/app' | '/api/chat'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/app'
+    | '/api/chat'
+    | '/app/pricing'
+    | '/app/profile'
+    | '/app/'
+    | '/app/c/$threadId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/app' | '/api/chat'
+  to:
+    | '/'
+    | '/auth'
+    | '/api/chat'
+    | '/app/pricing'
+    | '/app/profile'
+    | '/app'
+    | '/app/c/$threadId'
   id:
     | '__root__'
     | '/'
@@ -72,6 +123,10 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/app'
     | '/api/chat'
+    | '/_authenticated/app/pricing'
+    | '/_authenticated/app/profile'
+    | '/_authenticated/app/'
+    | '/_authenticated/app/c/$threadId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -118,15 +173,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/app/': {
+      id: '/_authenticated/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/profile': {
+      id: '/_authenticated/app/profile'
+      path: '/profile'
+      fullPath: '/app/profile'
+      preLoaderRoute: typeof AuthenticatedAppProfileRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/pricing': {
+      id: '/_authenticated/app/pricing'
+      path: '/pricing'
+      fullPath: '/app/pricing'
+      preLoaderRoute: typeof AuthenticatedAppPricingRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/c/$threadId': {
+      id: '/_authenticated/app/c/$threadId'
+      path: '/c/$threadId'
+      fullPath: '/app/c/$threadId'
+      preLoaderRoute: typeof AuthenticatedAppCThreadIdRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
   }
 }
 
+interface AuthenticatedAppRouteChildren {
+  AuthenticatedAppPricingRoute: typeof AuthenticatedAppPricingRoute
+  AuthenticatedAppProfileRoute: typeof AuthenticatedAppProfileRoute
+  AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+  AuthenticatedAppCThreadIdRoute: typeof AuthenticatedAppCThreadIdRoute
+}
+
+const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
+  AuthenticatedAppPricingRoute: AuthenticatedAppPricingRoute,
+  AuthenticatedAppProfileRoute: AuthenticatedAppProfileRoute,
+  AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
+  AuthenticatedAppCThreadIdRoute: AuthenticatedAppCThreadIdRoute,
+}
+
+const AuthenticatedAppRouteWithChildren =
+  AuthenticatedAppRoute._addFileChildren(AuthenticatedAppRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedAppRoute: typeof AuthenticatedAppRoute
+  AuthenticatedAppRoute: typeof AuthenticatedAppRouteWithChildren
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedAppRoute: AuthenticatedAppRoute,
+  AuthenticatedAppRoute: AuthenticatedAppRouteWithChildren,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -141,3 +241,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
