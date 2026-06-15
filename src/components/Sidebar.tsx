@@ -3,15 +3,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listConversations, createConversation, deleteConversation, getCredits } from "@/lib/chat.functions";
 import { getProfile } from "@/lib/profile.functions";
-import { Plus, Trash2, User, CreditCard, LogOut, MessageSquare } from "lucide-react";
+import { Plus, Trash2, CreditCard, LogOut, MessageSquare, PanelLeftClose, PanelLeft } from "lucide-react";
 import { Logo } from "./Logo";
 import { LanguageToggle } from "./LanguageToggle";
+import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 
-export function Sidebar() {
+export function Sidebar({ onClose, collapsed = false, onToggleCollapse }: { onClose?: () => void; collapsed?: boolean; onToggleCollapse?: () => void }) {
   const { t } = useI18n();
   const nav = useNavigate();
   const qc = useQueryClient();
@@ -50,34 +51,70 @@ export function Sidebar() {
 
   const initials = (profile?.full_name || profile?.email || "U").slice(0, 1).toUpperCase();
 
+  if (collapsed) {
+    return (
+      <aside className="hidden md:flex w-16 shrink-0 h-screen border-r border-border bg-sidebar flex-col items-center py-4 gap-3">
+        <button onClick={onToggleCollapse} title="Expand" className="h-10 w-10 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground">
+          <PanelLeft className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => createM.mutate()}
+          className="h-10 w-10 rounded-xl nova-gradient text-white flex items-center justify-center nova-glow"
+          title={t("chat.new")}
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+        <div className="flex-1" />
+        <Link to="/app/profile" title="Profile">
+          <Avatar className="h-9 w-9">
+            {profile?.avatarSignedUrl && <AvatarImage src={profile.avatarSignedUrl} />}
+            <AvatarFallback className="nova-gradient text-white text-xs">{initials}</AvatarFallback>
+          </Avatar>
+        </Link>
+      </aside>
+    );
+  }
+
   return (
-    <aside className="w-72 shrink-0 h-screen border-r border-border bg-card flex flex-col">
+    <aside className="w-72 shrink-0 h-screen border-r border-border bg-sidebar flex flex-col">
       <div className="px-4 py-4 flex items-center justify-between">
-        <Link to="/app"><Logo /></Link>
-        <LanguageToggle />
+        <Link to="/app" onClick={onClose}><Logo size={32} /></Link>
+        <div className="flex items-center gap-1">
+          <LanguageToggle />
+          <ThemeToggle />
+          {onToggleCollapse && (
+            <button onClick={onToggleCollapse} title="Collapse" className="hidden md:inline-flex h-9 w-9 items-center justify-center rounded-lg hover:bg-muted text-muted-foreground">
+              <PanelLeftClose className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
       <div className="px-3">
         <Button
-          onClick={() => createM.mutate()}
+          onClick={() => { createM.mutate(); onClose?.(); }}
           disabled={createM.isPending}
-          className="w-full nova-gradient text-white border-0 nova-glow"
+          className="w-full nova-gradient text-white border-0 nova-glow h-10 rounded-xl"
         >
           <Plus className="h-4 w-4 mr-1" /> {t("chat.new")}
         </Button>
       </div>
-      <div className="mt-3 flex-1 overflow-y-auto px-2">
+      <div className="mt-3 flex-1 overflow-y-auto px-2 scrollbar-thin">
+        {conversations.length === 0 && (
+          <div className="text-xs text-muted-foreground text-center px-3 py-6">{t("chat.empty.s")}</div>
+        )}
         {conversations.map((c) => {
           const active = params.threadId === c.id;
           return (
             <div
               key={c.id}
-              className={`group flex items-center justify-between gap-1 px-2 py-2 rounded-lg text-sm cursor-pointer ${
-                active ? "bg-accent text-accent-foreground" : "hover:bg-muted"
+              className={`group flex items-center justify-between gap-1 px-2 py-2 rounded-lg text-sm cursor-pointer transition ${
+                active ? "bg-accent text-accent-foreground" : "hover:bg-sidebar-accent"
               }`}
             >
               <Link
                 to="/app/c/$threadId"
                 params={{ threadId: c.id }}
+                onClick={onClose}
                 className="flex-1 truncate flex items-center gap-2"
               >
                 <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
@@ -96,14 +133,14 @@ export function Sidebar() {
       <div className="border-t border-border p-3 space-y-2">
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">{t("profile.credits")}</span>
-          <span className="font-mono font-semibold">{credits?.balance ?? "—"}</span>
+          <span className="font-mono font-semibold nova-text">{credits?.balance ?? "—"}</span>
         </div>
-        <Link to="/app/pricing" className="block">
+        <Link to="/app/pricing" className="block" onClick={onClose}>
           <Button variant="outline" size="sm" className="w-full">
             <CreditCard className="h-3.5 w-3.5 mr-1" /> {t("profile.upgrade")}
           </Button>
         </Link>
-        <Link to="/app/profile" className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted">
+        <Link to="/app/profile" onClick={onClose} className="flex items-center gap-2 p-2 rounded-lg hover:bg-sidebar-accent">
           <Avatar className="h-8 w-8">
             {profile?.avatarSignedUrl && <AvatarImage src={profile.avatarSignedUrl} />}
             <AvatarFallback className="nova-gradient text-white text-xs">{initials}</AvatarFallback>
@@ -112,7 +149,6 @@ export function Sidebar() {
             <div className="font-medium truncate">{profile?.full_name || profile?.email}</div>
             <div className="text-muted-foreground capitalize">{profile?.plan || "free"}</div>
           </div>
-          <User className="h-4 w-4 text-muted-foreground" />
         </Link>
         <button
           onClick={signOut}

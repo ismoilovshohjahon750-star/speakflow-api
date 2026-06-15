@@ -167,15 +167,17 @@ function Inner({
 
   return (
     <div className="flex flex-col h-full">
-      <div ref={scrollerRef} className="flex-1 overflow-y-auto px-4 py-6">
+      <div ref={scrollerRef} className="flex-1 overflow-y-auto px-4 py-6 scrollbar-thin">
         <div className="max-w-3xl mx-auto space-y-5">
           {allMessages.length === 0 ? (
-            <div className="text-center py-24">
-              <div className="inline-flex h-14 w-14 rounded-2xl nova-gradient items-center justify-center text-white mb-4">
-                <Sparkles className="h-6 w-6" />
+            <div className="text-center py-20 md:py-28">
+              <div className="inline-flex h-16 w-16 rounded-3xl nova-gradient items-center justify-center text-white mb-5 nova-glow">
+                <Sparkles className="h-7 w-7" />
               </div>
-              <h2 className="text-2xl font-semibold tracking-tight">{t("chat.empty.t")}</h2>
-              <p className="text-muted-foreground mt-1 text-sm">{t("chat.empty.s")}</p>
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+                <span className="nova-text">{t("chat.empty.t")}</span>
+              </h2>
+              <p className="text-muted-foreground mt-2 text-sm">{t("chat.empty.s")}</p>
             </div>
           ) : (
             allMessages.map((m) => (
@@ -188,14 +190,18 @@ function Inner({
             ))
           )}
           {isLoading && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground pl-11">
-              <Loader2 className="h-4 w-4 animate-spin" /> thinking…
+            <div className="flex items-center gap-3 text-sm text-muted-foreground pl-11">
+              <span className="flex gap-1">
+                <span className="h-2 w-2 rounded-full bg-current animate-bounce [animation-delay:-0.3s]" />
+                <span className="h-2 w-2 rounded-full bg-current animate-bounce [animation-delay:-0.15s]" />
+                <span className="h-2 w-2 rounded-full bg-current animate-bounce" />
+              </span>
             </div>
           )}
           {error && <div className="text-sm text-destructive">{error.message}</div>}
         </div>
       </div>
-      <div className="max-w-3xl w-full mx-auto">
+      <div className="w-full">
         <Composer mode={mode} setMode={setMode} onSend={handleSend} disabled={isLoading} />
       </div>
     </div>
