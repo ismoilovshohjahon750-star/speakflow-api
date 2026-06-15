@@ -1,10 +1,17 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Mic, Square, Send, Paperclip, ImagePlus, Camera, MessageSquare, ImageIcon, Loader2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { stt } from "@/lib/ai.functions";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
+
+type SR = typeof window extends { SpeechRecognition: infer T } ? T : unknown;
+function getSpeechRecognition(): (new () => any) | null {
+  if (typeof window === "undefined") return null;
+  const w = window as unknown as { SpeechRecognition?: new () => unknown; webkitSpeechRecognition?: new () => unknown };
+  return (w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null) as (new () => any) | null;
+}
 
 export type Attachment = { url: string; mediaType: string; name?: string };
 
@@ -30,6 +37,14 @@ export function Composer({
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const sttFn = useServerFn(stt);
+  const recognitionRef = useRef<any>(null);
+  const baseTextRef = useRef("");
+  const { lang } = useI18n();
+
+  useEffect(() => () => {
+    try { recognitionRef.current?.stop(); } catch {/* noop */}
+    recorderRef.current?.stream.getTracks().forEach((t) => t.stop());
+  }, []);
 
   const onPickFiles = (list: FileList | null) => {
     if (!list) return;
@@ -46,6 +61,41 @@ export function Composer({
   };
 
   const startRecording = async () => {
+    // Prefer the live, free, accurate browser SpeechRecognition where available
+    const SRClass = getSpeechRecognition();
+    if (SRClass) {
+      try {
+        const rec = new SRClass();
+        rec.lang = lang === "uz" ? "uz-UZ" : "en-US";
+        rec.continuous = true;
+        rec.interimResults = true;
+        baseTextRef.current = text ? text + " " : "";
+        rec.onresult = (e: any) => {
+          let interim = "";
+          let final = "";
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            const r = e.results[i];
+            if (r.isFinal) final += r[0].transcript;
+            else interim += r[0].transcript;
+          }
+          setText(baseTextRef.current + final + interim);
+          if (final) baseTextRef.current += final;
+        };
+        rec.onerror = (e: any) => {
+          if (e?.error === "not-allowed") toast.error("Microphone access denied");
+          else if (e?.error !== "no-speech" && e?.error !== "aborted") toast.error(`Mic error: ${e?.error ?? "unknown"}`);
+          setRecording(false);
+        };
+        rec.onend = () => setRecording(false);
+        rec.start();
+        recognitionRef.current = rec;
+        setRecording(true);
+        return;
+      } catch {
+        // fall through to MediaRecorder + server STT
+      }
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mime = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/mp4";
@@ -76,7 +126,13 @@ export function Composer({
     }
   };
   const stopRecording = () => {
-    recorderRef.current?.stop();
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch { /* noop */ }
+      recognitionRef.current = null;
+    }
+    if (recorderRef.current && recorderRef.current.state !== "inactive") {
+      recorderRef.current.stop();
+    }
     setRecording(false);
   };
 
@@ -89,9 +145,9 @@ export function Composer({
   };
 
   return (
-    <div className="border-t border-border bg-card p-3">
+    <div className="px-3 pb-3 pt-1">
       {files.length > 0 && (
-        <div className="flex gap-2 mb-2 flex-wrap">
+        <div className="flex gap-2 mb-2 flex-wrap max-w-3xl mx-auto">
           {files.map((f, i) => (
             <div key={i} className="relative">
               {f.mediaType.startsWith("image/") ? (
@@ -107,52 +163,49 @@ export function Composer({
           ))}
         </div>
       )}
-      <div className="flex items-end gap-2">
-        <div className="flex items-center gap-1">
-          <IconBtn onClick={() => fileRef.current?.click()} title="File"><Paperclip className="h-4 w-4" /></IconBtn>
-          <IconBtn onClick={() => imageRef.current?.click()} title="Image"><ImagePlus className="h-4 w-4" /></IconBtn>
-          <IconBtn onClick={() => cameraRef.current?.click()} title="Camera"><Camera className="h-4 w-4" /></IconBtn>
-          <IconBtn
-            onClick={recording ? stopRecording : startRecording}
-            title={recording ? "Stop" : "Mic"}
-            className={recording ? "text-destructive" : ""}
-          >
-            {transcribing ? <Loader2 className="h-4 w-4 animate-spin" /> : recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-          </IconBtn>
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
-            }}
-            placeholder={recording ? t("chat.recording") : t("chat.placeholder")}
-            rows={1}
-            className="w-full resize-none bg-transparent outline-none text-sm py-2 max-h-40"
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setMode(mode === "chat" ? "image" : "chat")}
-            className="text-xs flex items-center gap-1 px-2 py-1 rounded-md border border-border hover:bg-muted"
-            title="Mode"
-          >
-            {mode === "chat" ? <MessageSquare className="h-3.5 w-3.5" /> : <ImageIcon className="h-3.5 w-3.5" />}
-            <span className="capitalize">{mode}</span>
-          </button>
+      <div className="max-w-3xl mx-auto rounded-3xl border border-border bg-card shadow-xl shadow-black/5 overflow-hidden">
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+          }}
+          placeholder={recording ? t("chat.recording") : t("chat.placeholder")}
+          rows={1}
+          className="w-full resize-none bg-transparent outline-none text-[15px] px-4 pt-3.5 pb-1 max-h-48"
+        />
+        <div className="flex items-center justify-between px-2 pb-2">
+          <div className="flex items-center gap-0.5">
+            <IconBtn onClick={() => fileRef.current?.click()} title="Attach file"><Paperclip className="h-4 w-4" /></IconBtn>
+            <IconBtn onClick={() => imageRef.current?.click()} title="Attach image"><ImagePlus className="h-4 w-4" /></IconBtn>
+            <IconBtn onClick={() => cameraRef.current?.click()} title="Camera"><Camera className="h-4 w-4" /></IconBtn>
+            <IconBtn
+              onClick={recording ? stopRecording : startRecording}
+              title={recording ? "Stop" : "Voice"}
+              className={recording ? "text-destructive animate-pulse" : ""}
+            >
+              {transcribing ? <Loader2 className="h-4 w-4 animate-spin" /> : recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </IconBtn>
+            <button
+              onClick={() => setMode(mode === "chat" ? "image" : "chat")}
+              className="ml-1 text-xs flex items-center gap-1.5 px-2.5 h-8 rounded-full border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition"
+              title="Toggle mode"
+            >
+              {mode === "chat" ? <MessageSquare className="h-3.5 w-3.5" /> : <ImageIcon className="h-3.5 w-3.5" />}
+              <span className="capitalize">{mode}</span>
+            </button>
+          </div>
           <Button
             onClick={send}
             disabled={disabled || (!text.trim() && files.length === 0)}
             size="icon"
-            className="nova-gradient text-white border-0 nova-glow h-10 w-10 rounded-full"
+            className="nova-gradient text-white border-0 nova-glow h-9 w-9 rounded-full disabled:opacity-40"
           >
             <Send className="h-4 w-4" />
           </Button>
         </div>
       </div>
+      <p className="text-[10px] text-muted-foreground text-center mt-2">Nova can make mistakes. Verify important info.</p>
 
       <input ref={fileRef} type="file" hidden onChange={(e) => onPickFiles(e.target.files)} />
       <input ref={imageRef} type="file" accept="image/*" hidden onChange={(e) => onPickFiles(e.target.files)} />
@@ -167,7 +220,7 @@ function IconBtn({ children, onClick, title, className = "" }: { children: React
       type="button"
       onClick={onClick}
       title={title}
-      className={`h-9 w-9 rounded-full hover:bg-muted text-muted-foreground flex items-center justify-center ${className}`}
+      className={`h-8 w-8 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition ${className}`}
     >
       {children}
     </button>
