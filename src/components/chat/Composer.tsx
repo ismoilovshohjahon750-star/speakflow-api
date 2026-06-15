@@ -6,11 +6,12 @@ import { stt } from "@/lib/ai.functions";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
 
-type SR = typeof window extends { SpeechRecognition: infer T } ? T : unknown;
-function getSpeechRecognition(): (new () => any) | null {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnySR = any;
+function getSpeechRecognition(): (new () => AnySR) | null {
   if (typeof window === "undefined") return null;
   const w = window as unknown as { SpeechRecognition?: new () => unknown; webkitSpeechRecognition?: new () => unknown };
-  return (w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null) as (new () => any) | null;
+  return (w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null) as (new () => AnySR) | null;
 }
 
 export type Attachment = { url: string; mediaType: string; name?: string };
@@ -26,7 +27,7 @@ export function Composer({
   onSend: (text: string, files: Attachment[]) => void;
   disabled?: boolean;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [text, setText] = useState("");
   const [files, setFiles] = useState<Attachment[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -37,9 +38,8 @@ export function Composer({
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const sttFn = useServerFn(stt);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<AnySR>(null);
   const baseTextRef = useRef("");
-  const { lang } = useI18n();
 
   useEffect(() => () => {
     try { recognitionRef.current?.stop(); } catch {/* noop */}
