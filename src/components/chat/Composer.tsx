@@ -70,7 +70,7 @@ export function Composer({
         rec.continuous = true;
         rec.interimResults = true;
         baseTextRef.current = text ? text + " " : "";
-        rec.onresult = (e: any) => {
+        rec.onresult = (e: AnySR) => {
           let interim = "";
           let final = "";
           for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -81,7 +81,7 @@ export function Composer({
           setText(baseTextRef.current + final + interim);
           if (final) baseTextRef.current += final;
         };
-        rec.onerror = (e: any) => {
+        rec.onerror = (e: AnySR) => {
           if (e?.error === "not-allowed") toast.error("Microphone access denied");
           else if (e?.error !== "no-speech" && e?.error !== "aborted") toast.error(`Mic error: ${e?.error ?? "unknown"}`);
           setRecording(false);
