@@ -20,12 +20,6 @@ function AppLayout() {
         <Sidebar collapsed={collapsed} onToggleCollapse={() => setCollapsed((v) => !v)} />
       </div>
 
-      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="p-0 w-80 bg-sidebar border-border">
-          <Sidebar onClose={() => setMobileOpen(false)} />
-        </SheetContent>
-      </Sheet>
-
       <main className="flex-1 min-w-0 overflow-hidden flex flex-col">
         <header className="md:hidden h-14 border-b border-border flex items-center justify-between px-3 bg-card/60 backdrop-blur">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -34,6 +28,9 @@ function AppLayout() {
                 <Menu className="h-5 w-5" />
               </button>
             </SheetTrigger>
+            <SheetContent side="left" className="p-0 w-80 bg-sidebar border-border">
+              <Sidebar onClose={() => setMobileOpen(false)} />
+            </SheetContent>
           </Sheet>
           <Logo size={28} textClass="text-base" />
           <ThemeToggle />
